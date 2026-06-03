@@ -266,8 +266,81 @@ public class AlgoritmosGrafoDirigido implements IDirectedGraphAlgorithms {
     }
 
     @Override
-    public <V, D extends WeightedEdge> List<Path<V>> obtenerTodosLosCaminos(Comparable<V> source, Comparable<V> target, IGraph<V, D> grafo) {
-        return List.of();
+    public <V, D extends WeightedEdge> List<Path<V>> obtenerTodosLosCaminos(
+            Comparable<V> source,
+            Comparable<V> target,
+            IGraph<V, D> grafo) {
+
+        List<Path<V>> resultado = new ArrayList<>();
+
+        V origen = grafo.buscarVertice(source);
+        V destino = grafo.buscarVertice(target);
+
+        if (origen == null || destino == null) {
+            return resultado;
+        }
+
+        Set<V> visitados = new HashSet<>();
+        List<V> caminoActual = new ArrayList<>();
+
+        dfsCaminos(
+                origen,
+                destino,
+                grafo,
+                visitados,
+                caminoActual,
+                0,
+                resultado
+        );
+
+        return resultado;
+    }
+
+    private <V, D extends WeightedEdge> void dfsCaminos(
+            V actual,
+            V destino,
+            IGraph<V, D> grafo,
+            Set<V> visitados,
+            List<V> caminoActual,
+            double costoActual,
+            List<Path<V>> resultado) {
+
+        visitados.add(actual);
+        caminoActual.add(actual);
+
+        if (actual.equals(destino)) {
+
+            resultado.add(
+                    new Path<>(
+                            new ArrayList<>(caminoActual),
+                            costoActual
+                    )
+            );
+
+        } else {
+
+            for (Edge<V, D> arista :
+                    grafo.adyacencias(grafo.construirComparable(actual))) {
+
+                V siguiente = arista.target();
+
+                if (!visitados.contains(siguiente)) {
+
+                    dfsCaminos(
+                            siguiente,
+                            destino,
+                            grafo,
+                            visitados,
+                            caminoActual,
+                            costoActual + arista.dato().getWeight(),
+                            resultado
+                    );
+                }
+            }
+        }
+
+        caminoActual.remove(caminoActual.size() - 1);
+        visitados.remove(actual);
     }
 
     @Override
@@ -331,7 +404,53 @@ public class AlgoritmosGrafoDirigido implements IDirectedGraphAlgorithms {
 
     @Override
     public <V, D> List<V> calcularClasificacionTopologica(IDirectedIGraph<V, D> grafo) {
-        return List.of();
+
+        if (grafo.tieneCiclos()){
+            throw new IllegalStateException(
+                    "No se puede realizar clasificación topológica sobre un grafo con ciclos"
+            );
+        }
+
+        Stack<V> pila = new Stack<>();
+        Set<V> visitados = new HashSet<>();
+
+        for (V vertice : grafo.vertices()) {
+            if (!visitados.contains(vertice)) {
+                dfsTopologico(vertice, grafo, visitados, pila);
+            }
+        }
+
+        List<V> resultado = new ArrayList<>();
+
+        while (!pila.isEmpty()) {
+            resultado.add(pila.pop());
+        }
+
+        return resultado;
+    }
+
+    private <V, D> void dfsTopologico(
+            V actual,
+            IDirectedIGraph<V, D> grafo,
+            Set<V> visitados,
+            Stack<V> pila) {
+
+        visitados.add(actual);
+
+        for (V sucesor : grafo.successors(grafo.construirComparable(actual))) {
+
+            if (!visitados.contains(sucesor)) {
+
+                dfsTopologico(
+                        sucesor,
+                        grafo,
+                        visitados,
+                        pila
+                );
+            }
+        }
+
+        pila.push(actual);
     }
 
     @Override
