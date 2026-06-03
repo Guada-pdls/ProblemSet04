@@ -3,6 +3,7 @@ package ucu.edu.aed.tda.grafo.model.implementacion;
 import ucu.edu.aed.tda.grafo.IDirectedGraphAlgorithms;
 import ucu.edu.aed.tda.grafo.IDirectedIGraph;
 import ucu.edu.aed.tda.grafo.model.IGraph;
+import ucu.edu.aed.tda.grafo.model.edge.Edge;
 import ucu.edu.aed.tda.grafo.model.edge.WeightedEdge;
 import ucu.edu.aed.tda.grafo.model.result.IDijkstraResult;
 import ucu.edu.aed.tda.grafo.model.result.IFloydWarshallResult;
@@ -15,12 +16,154 @@ public class AlgoritmosGrafoDirigido implements IDirectedGraphAlgorithms {
 
     @Override
     public <V, D extends WeightedEdge> IDijkstraResult<V> dijkstra(Comparable<V> source, IDirectedIGraph<V, D> grafo) {
-        return null;
+        V origen = grafo.buscarVertice(source);
+
+        Map<V, Double> costos = new HashMap<>();
+        Map<V, V> anteriores = new HashMap<>();
+        Set<V> visitados = new HashSet<>();
+
+        for (V vertice : grafo.vertices()) {
+            costos.put(vertice, Double.POSITIVE_INFINITY);
+        }
+
+        if (origen != null) {
+            costos.put(origen, 0.0);
+        }
+
+        while (visitados.size() < grafo.vertices().size()) {
+            V actual = null;
+            double menorCosto = Double.POSITIVE_INFINITY;
+
+            for (V vertice : grafo.vertices()) {
+                if (!visitados.contains(vertice) && costos.get(vertice) < menorCosto) {
+                    menorCosto = costos.get(vertice);
+                    actual = vertice;
+                }
+            }
+
+            if (actual == null) {
+                break;
+            }
+
+            visitados.add(actual);
+
+            for (Edge<V, D> arista : grafo.adyacencias(grafo.construirComparable(actual))) {
+                V destino = arista.target();
+                double nuevoCosto = costos.get(actual) + arista.dato().getWeight();
+
+                if (nuevoCosto < costos.get(destino)) {
+                    costos.put(destino, nuevoCosto);
+                    anteriores.put(destino, actual);
+                }
+            }
+        }
+
+        return new IDijkstraResult<V>() {
+            @Override
+            public double getCost(V otherVertex) {
+                return costos.getOrDefault(otherVertex, Double.POSITIVE_INFINITY);
+            }
+
+            @Override
+            public List<V> getPath(V otherVertex) {
+                if (origen == null || getCost(otherVertex) == Double.POSITIVE_INFINITY) {
+                    return List.of();
+                }
+
+                LinkedList<V> camino = new LinkedList<>();
+                V actual = otherVertex;
+
+                while (actual != null) {
+                    camino.addFirst(actual);
+
+                    if (actual.equals(origen)) {
+                        return camino;
+                    }
+
+                    actual = anteriores.get(actual);
+                }
+
+                return List.of();
+            }
+        };
     }
 
     @Override
     public <V, D extends WeightedEdge> IFloydWarshallResult<V> floyd(IDirectedIGraph<V, D> grafo) {
-        return null;
+        List<V> vertices = new ArrayList<>(grafo.vertices());
+        int n = vertices.size();
+
+        double[][] costos = new double[n][n];
+        int[][] siguientes = new int[n][n];
+
+        for (int i = 0; i < n; i++) {
+            Arrays.fill(costos[i], Double.POSITIVE_INFINITY);
+            Arrays.fill(siguientes[i], -1);
+
+            costos[i][i] = 0;
+            siguientes[i][i] = i;
+        }
+
+        for (Edge<V, D> arista : grafo.aristas()) {
+            int origen = vertices.indexOf(arista.source());
+            int destino = vertices.indexOf(arista.target());
+
+            costos[origen][destino] = arista.dato().getWeight();
+            siguientes[origen][destino] = destino;
+        }
+
+        for (int k = 0; k < n; k++) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    double nuevoCosto = costos[i][k] + costos[k][j];
+
+                    if (nuevoCosto < costos[i][j]) {
+                        costos[i][j] = nuevoCosto;
+                        siguientes[i][j] = siguientes[i][k];
+                    }
+                }
+            }
+        }
+
+        return new IFloydWarshallResult<V>() {
+            @Override
+            public List<V> getPath(V source, V target) {
+                int origen = vertices.indexOf(source);
+                int destino = vertices.indexOf(target);
+
+                if (origen == -1 || destino == -1 || siguientes[origen][destino] == -1) {
+                    return List.of();
+                }
+
+                List<V> camino = new ArrayList<>();
+                int actual = origen;
+
+                while (actual != destino) {
+                    camino.add(vertices.get(actual));
+                    actual = siguientes[actual][destino];
+                }
+
+                camino.add(vertices.get(destino));
+                return camino;
+            }
+
+            @Override
+            public double getCost(V source, V target) {
+                int origen = vertices.indexOf(source);
+                int destino = vertices.indexOf(target);
+
+                if (origen == -1 || destino == -1) {
+                    return Double.POSITIVE_INFINITY;
+                }
+
+                return costos[origen][destino];
+            }
+
+            @Override
+            public boolean connected(V source, V target) {
+                return getCost(source, target) != Double.POSITIVE_INFINITY;
+            }
+        };
     }
 
     @Override
