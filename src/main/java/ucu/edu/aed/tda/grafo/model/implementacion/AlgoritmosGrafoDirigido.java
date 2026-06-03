@@ -168,7 +168,61 @@ public class AlgoritmosGrafoDirigido implements IDirectedGraphAlgorithms {
 
     @Override
     public <V, D extends WeightedEdge> IFloydWarshallResult<V> warshall(IDirectedIGraph<V, D> grafo) {
-        return null;
+
+        List<V> vertices = new ArrayList<>(grafo.vertices());
+        int n = vertices.size();
+
+        boolean[][] reach = new boolean[n][n];
+
+        for (int i = 0; i < n; i++) {
+            reach[i][i] = true;
+        }
+
+        for (Edge<V, D> e : grafo.aristas()) {
+            int i = vertices.indexOf(e.source());
+            int j = vertices.indexOf(e.target());
+            reach[i][j] = true;
+        }
+
+        for (int k = 0; k < n; k++) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    reach[i][j] = reach[i][j] || (reach[i][k] && reach[k][j]);
+                }
+            }
+        }
+
+        return new IFloydWarshallResult<V>() {
+
+            @Override
+            public List<V> getPath(V source, V target) {
+                return List.of();
+            }
+
+            @Override
+            public double getCost(V source, V target) {
+                int i = vertices.indexOf(source);
+                int j = vertices.indexOf(target);
+
+                if (i == -1 || j == -1) {
+                    return Double.POSITIVE_INFINITY;
+                }
+
+                return reach[i][j] ? 1 : Double.POSITIVE_INFINITY;
+            }
+
+            @Override
+            public boolean connected(V source, V target) {
+                int i = vertices.indexOf(source);
+                int j = vertices.indexOf(target);
+
+                if (i == -1 || j == -1) {
+                    return false;
+                }
+
+                return reach[i][j];
+            }
+        };
     }
 
     @Override
@@ -217,8 +271,38 @@ public class AlgoritmosGrafoDirigido implements IDirectedGraphAlgorithms {
     }
 
     @Override
-    public <V, D> void recorridoEnProfundidad(IGraph<V, D> grafo, Comparable<V> sourceCriteria, Consumer<V> consumer) {
+    public <V, D> void recorridoEnProfundidad(
+            IGraph<V, D> grafo,
+            Comparable<V> sourceCriteria,
+            Consumer<V> consumer) {
 
+        V inicio = grafo.buscarVertice(sourceCriteria);
+
+        if (inicio == null) {
+            return;
+        }
+
+        Set<V> visitados = new HashSet<>();
+
+        dfs((IDirectedIGraph<V, D>) grafo, inicio, visitados, consumer);
+    }
+
+    private <V, D> void dfs(
+            IDirectedIGraph<V, D> grafo,
+            V actual,
+            Set<V> visitados,
+            Consumer<V> consumer) {
+
+        if (visitados.contains(actual)) {
+            return;
+        }
+
+        visitados.add(actual);
+        consumer.accept(actual);
+
+        for (V v : grafo.successors(grafo.construirComparable(actual))) {
+            dfs(grafo, v, visitados, consumer);
+        }
     }
 
     @Override
