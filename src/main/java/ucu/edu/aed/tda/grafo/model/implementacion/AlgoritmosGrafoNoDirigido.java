@@ -9,11 +9,64 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class AlgoritmosGrafoNoDirigido implements IUndirectedGraphAlgorithm {
-    @Override
-    public <V, D extends WeightedEdge> IUndirectedGraph<V, D> kruskal(IUndirectedGraph<V, D> graph) {
-        return null;
-    }
 
+    @Override
+    public <V, D extends WeightedEdge> IUndirectedGraph<V, D> kruskal(
+            IUndirectedGraph<V, D> graph) {
+
+        if (graph == null) {
+            return null;
+        }
+
+        List<Edge<V, D>> aristasDisponibles =
+                new ArrayList<>(graph.aristas());
+
+        IUndirectedGraph<V, D> resultado =
+                new GrafoNoDirigido<V, D>();
+
+        for (V vertice : graph.vertices()) {
+            resultado.agregarVertice(vertice);
+        }
+
+        int cantidadAristas = 0;
+
+        int necesarias = graph.cantidadDeVertices() - 1;
+
+        while (cantidadAristas < necesarias
+                && !aristasDisponibles.isEmpty()) {
+            Edge<V, D> menor = null;
+
+            for (Edge<V, D> arista : aristasDisponibles) {
+
+                if (menor == null
+                        || arista.dato().getWeight()
+                        < menor.dato().getWeight()) {
+
+                    menor = arista;
+                }
+            }
+
+            aristasDisponibles.remove(menor);
+
+            resultado.agregarArista(
+                    menor.source(),
+                    menor.target(),
+                    menor.dato()
+            );
+
+            if (resultado.tieneCiclos()) {
+
+                resultado.eliminarArista(
+                        resultado.construirComparable(menor.source()),
+                        resultado.construirComparable(menor.target())
+                );
+            } else {
+
+                cantidadAristas++;
+            }
+        }
+        return resultado;
+    }
     @Override
     public <V, D extends WeightedEdge> IUndirectedGraph<V, D> prim(IUndirectedGraph<V, D> graph, Comparable<V> source) {
         return null;
